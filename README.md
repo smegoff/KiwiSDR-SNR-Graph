@@ -16,7 +16,7 @@ A pair of Python scripts to:
 │   └── kiwi_snr_history.log        # (auto-created) rolling log of SNR snapshots
 │
 ├── KiwiSDR_Graph.py                # “graph only” script: reads a “latest” JSON line and plots it
-├── log_kiwidsr_snr.py              # continuous polling/logger script: appends to history log
+├── KiwiSDR_SNR.py              # continuous polling/logger script: appends to history log
 ├── README.md                       # this file
 └── requirements.txt                # Python dependencies
 ```
