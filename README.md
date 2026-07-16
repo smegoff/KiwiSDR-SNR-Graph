@@ -1,74 +1,86 @@
-# KiwiSDR SNR Graph
+# KiwiSDR SNR Monitor
 
-A combined logger & real-time graph for KiwiSDR SNR data.  
-Polls your KiwiSDR’s `/snr` endpoint every minute, logs the raw JSON to a file, and displays an interactive, live-updating Matplotlib dashboard with per-band SNR curves, click-to-toggle legend entries, peak-dB annotations, and “All On/All Off” controls.
+A modern Python monitor for KiwiSDR `/snr` data. It polls a KiwiSDR receiver,
+keeps a durable long-term JSONL history, and displays a live Matplotlib dashboard
+with per-band SNR traces, smoothing, peak labels, and legend-based visibility
+controls.
 
----
+## Features
 
-## 📋 Prerequisites
+- Polls `http://<kiwi>:8073/snr` on a configurable interval.
+- Appends every successful response to `data/kiwi_snr_history.jsonl` for long-term logging.
+- Graphs all logged history rather than only the latest snapshot.
+- Supports non-interactive use for services, cron jobs, and remote hosts.
+- Handles legacy log lines from older versions of this project.
+- Remembers the last KiwiSDR URL in `data/last_kiwi_url.txt`.
 
-- **Python** ≥ 3.7  
-- **pip** (Python package installer)
+## Installation
 
----
-
-## ⚙️ Installation
-
-1. **Clone or download** this repository:  
-   ```bash
-   git clone https://github.com/smegoff/KiwiSDR-SNR-Graph.git
-   cd KiwiSDR-SNR-Graph
-2. Create a virtual environment (recommended):
+```bash
 python -m venv venv
 source venv/bin/activate        # macOS/Linux
-venv\Scripts\activate           # Windows
+# venv\Scripts\activate         # Windows
+pip install -r requirements.txt
+```
 
-3. Install the Python dependencies:
-pip install requests numpy matplotlib tzlocal
+## Usage
 
-🚀 Usage
+Start polling and open the live dashboard:
 
-    Run the monitor script:
+```bash
+python KiwiSDR_Monitor.py http://192.168.1.50:8073
+```
 
-python KiwiSDR_Monitor.py
+Poll once and exit, useful for cron or testing:
 
-Enter your KiwiSDR base URL when prompted, for example:
+```bash
+python KiwiSDR_Monitor.py http://192.168.1.50:8073 --once
+```
 
-    KiwiSDR base URL [http://192.168.1.50:8073]:
+Run as a headless long-term logger without opening a graph window:
 
-        Press Enter to accept the default (saved from last run), or paste a new URL.
+```bash
+python KiwiSDR_Monitor.py http://192.168.1.50:8073 --headless --interval 60
+```
 
-    The script will:
+Graph existing history without polling the receiver:
 
-        Spawn a background thread polling /snr every 60 seconds.
+```bash
+python KiwiSDR_Monitor.py --no-poll --log-file data/kiwi_snr_history.jsonl
+```
 
-        Append each JSON snapshot to KiwiSDR_SNR_latest.log.
+## Command-line options
 
-        Open a Matplotlib window showing:
+| Option | Description |
+| --- | --- |
+| `url` | KiwiSDR base URL. If omitted, the last saved URL is reused when polling. |
+| `--log-file PATH` | JSONL history path. Default: `data/kiwi_snr_history.jsonl`. |
+| `--interval SECONDS` | Polling interval. Default: `60`. |
+| `--refresh-ms MS` | Dashboard refresh interval. Default: `30000`. |
+| `--smooth N` | Moving-average smoothing window in samples. Default: `3`. |
+| `--no-poll` | Read and graph existing history only. |
+| `--once` | Poll one `/snr` snapshot, append it to the log, and exit. |
+| `--headless` | Keep polling without opening a graph window. |
 
-            Live-updating SNR vs. time curves per band.
+## Log format
 
-            Click on a legend entry to toggle that band on/off.
+Each line in the history file is JSON containing the collection time and the raw
+KiwiSDR payload:
 
-            Peak-dB annotations appear only on visible bands.
+```json
+{"collected_at":"2026-07-14T12:00:00+00:00","payload":[{"ts":"Tue Jul 14 12:00:00 2026","snr":[{"lo":7000,"hi":7300,"snr":34.2}]}]}
+```
 
-            All On / All Off buttons for bulk toggling.
+Because the raw payload is preserved, future tools can reprocess the data without
+losing receiver-specific details.
 
-            An instruction line below the legend:
-            “Click on the coloured line to toggle that band on/off.”
+## Notes for long-term operation
 
-🔧 Configuration
+- Use `--headless` under systemd, cron, tmux, or another process supervisor.
+- Back up `data/kiwi_snr_history.jsonl`; this is the long-term database.
+- If the log grows very large, the dashboard plots the most recent 50,000 timestamps
+  to stay responsive while preserving the full file on disk.
 
-    Polling interval: Adjust POLL_INTERVAL (in seconds) at the top of KiwiSDR_Monitor.py.
+## License
 
-    Graph refresh rate: Adjust REFRESH_MS (in milliseconds) at the top of the script.
-
-    Smoothing window: Modify SMOOTH_WINDOW (samples) to change moving-average smoothing.
-
-    Layout: Tweak the plt.subplots_adjust(...) parameters in the plotting section to adjust margins and spacing.
-
-📝 License
-
-MIT © Your Name
-Feel free to fork and contribute back!
-
+MIT
